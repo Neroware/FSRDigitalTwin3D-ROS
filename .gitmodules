@@ -27,3 +27,6 @@
 	path = src/robotnik_simulation
 	url = https://github.com/RobotnikAutomation/robotnik_simulation.git
 	branch = humble-devel
+[submodule "src/universal_robots_ros2_description"]
+	path = src/universal_robots_ros2_description
+	url = https://github.com/RobotnikAutomation/Universal_Robots_ROS2_Description.git
