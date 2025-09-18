@@ -2,7 +2,7 @@
 
       <!-- include file="$(find-pkg-share ur5_gripper_moveit_config)/launch/ur5_gripper_moveit.launch.py"/ -->
 
-      <include file="$(find-pkg-share ur_bringup)/launch/ur_control.launch.py">
+      <include file="$(find-pkg-share ur_robot_driver)/launch/ur_control.launch.py">
         <arg name="ur_type" value="ur5e"/>
         <arg name="robot_ip" value="yyy.yyy.yyy.yyy"/>
         <arg name="use_fake_hardware" value="true"/>
