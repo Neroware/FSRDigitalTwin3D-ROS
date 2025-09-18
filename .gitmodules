@@ -1,0 +1,9 @@
+[submodule "src/ros_tcp_endpoint"]
+	path = src/ros_tcp_endpoint
+	url = https://github.com/Unity-Technologies/ROS-TCP-Endpoint
+[submodule "src/pymoveit2"]
+	path = src/pymoveit2
+	url = https://github.com/AndrejOrsula/pymoveit2.git
+[submodule "src/moveit_msgs"]
+	path = src/moveit_msgs
+	url = https://github.com/moveit/moveit_msgs.git
