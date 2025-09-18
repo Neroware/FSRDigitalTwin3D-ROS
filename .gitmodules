@@ -7,3 +7,23 @@
 [submodule "src/moveit_msgs"]
 	path = src/moveit_msgs
 	url = https://github.com/moveit/moveit_msgs.git
+[submodule "src/robotnik_description"]
+	path = src/robotnik_description
+	url = https://github.com/RobotnikAutomation/robotnik_description.git
+	branch = humble-devel
+[submodule "src/robotnik_sensors"]
+	path = src/robotnik_sensors
+	url = https://github.com/RobotnikAutomation/robotnik_sensors.git
+	branch = humble-devel
+[submodule "src/robotnik_common"]
+	path = src/robotnik_common
+	url = https://github.com/RobotnikAutomation/robotnik_common.git
+	branch = humble
+[submodule "src/robotnik_interfaces"]
+	path = src/robotnik_interfaces
+	url = https://github.com/RobotnikAutomation/robotnik_interfaces.git
+	branch = humble-devel
+[submodule "src/robotnik_simulation"]
+	path = src/robotnik_simulation
+	url = https://github.com/RobotnikAutomation/robotnik_simulation.git
+	branch = humble-devel
