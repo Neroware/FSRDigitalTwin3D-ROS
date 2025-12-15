@@ -31,6 +31,7 @@ install(DIRECTORY launch DESTINATION share/${PROJECT_NAME}/)
 
 set(msg_files
   "msg/MoveitJoints.msg"
+  "msg/PickAndPlaceInput.msg"
   "msg/Trajectory.msg"
 )
 

@@ -53,14 +53,14 @@ class FSR_MoveIt_Server(Node):
     def _plan_pick_and_place(self, req, res):
         self.get_logger().info("Recieved request to plan pick-and-place trajectory...")
 
-        # joint_names = ['shoulder_pan_joint', 'shoulder_lift_joint', 'elbow_joint', 'wrist_1_joint', 'wrist_2_joint', 'wrist_3_joint']
-        joint_names = req.joints_input.joint_names
-
         callback_group = ReentrantCallbackGroup()
 
-        group_name = "ur_manipulator"
-        end_effector_name = "tool0"
-        base_link_name = "base"
+        joint_names = req.joints_input.joint_names
+        group_name = req.pnp_input.group_name
+        end_effector_name = req.pnp_input.end_effector_name
+        base_link_name = req.pnp_input.base_link_name
+        max_velocity = req.pnp_input.max_velocity
+        max_acceleration = req.pnp_input.max_acceleration
         planner_id = "RRTConnectkConfigDefault"
 
         move_group = MoveIt2(
@@ -83,7 +83,7 @@ class FSR_MoveIt_Server(Node):
         current_robot_joint_configuration = req.joints_input.joints
 
         # Pre grasp - position gripper directly above target object
-        pre_grasp_pose = self._plan_trajectory(joint_names, move_group, req.pick_pose, current_robot_joint_configuration)
+        pre_grasp_pose = self._plan_trajectory(joint_names, move_group, req.pick_pose, current_robot_joint_configuration, max_velocity, max_acceleration)
 
          # If the trajectory has no points, planning has failed and we return an empty response
         if not pre_grasp_pose.joint_trajectory.points:
@@ -93,8 +93,8 @@ class FSR_MoveIt_Server(Node):
 
         # Grasp - lower gripper so that fingers are on either side of object
         pick_pose = copy.deepcopy(req.pick_pose)
-        pick_pose.position.z -= 0.066  # Static value coming from Unity, TODO: pass along with request
-        grasp_pose = self._plan_trajectory(joint_names, move_group, pick_pose, previous_ending_joint_angles)
+        pick_pose.position.z -= req.pnp_input.pick_pose_z # Static value coming from Unity
+        grasp_pose = self._plan_trajectory(joint_names, move_group, pick_pose, previous_ending_joint_angles, max_velocity, max_acceleration)
 
         if not pre_grasp_pose.joint_trajectory.points:
             return res
@@ -102,7 +102,7 @@ class FSR_MoveIt_Server(Node):
         previous_ending_joint_angles = grasp_pose.joint_trajectory.points[-1].positions
 
         # Pick Up - raise gripper back to the pre grasp position
-        pick_up_pose = self._plan_trajectory(joint_names, move_group, req.pick_pose, previous_ending_joint_angles)
+        pick_up_pose = self._plan_trajectory(joint_names, move_group, req.pick_pose, previous_ending_joint_angles, max_velocity, max_acceleration)
 
         if not pick_up_pose.joint_trajectory.points:
             return res
@@ -110,7 +110,7 @@ class FSR_MoveIt_Server(Node):
         previous_ending_joint_angles = pick_up_pose.joint_trajectory.points[-1].positions
 
         # Place - move gripper to desired placement position
-        place_pose = self._plan_trajectory(joint_names, move_group, req.place_pose, previous_ending_joint_angles)
+        place_pose = self._plan_trajectory(joint_names, move_group, req.place_pose, previous_ending_joint_angles, max_velocity, max_acceleration)
 
         if not place_pose.joint_trajectory.points:
             return res
@@ -128,7 +128,7 @@ class FSR_MoveIt_Server(Node):
     """
     Given the start angles of the robot, plan a trajectory that ends at the destination pose.
     """
-    def _plan_trajectory(self, joint_names, move_group, destination_pose, start_joint_angles):
+    def _plan_trajectory(self, joint_names, move_group, destination_pose, start_joint_angles, max_velocity = 0.5, max_acceleration = 0.5):
         start_joint_angles = start_joint_angles.tolist()
 
         current_joint_state = JointState()
@@ -138,8 +138,8 @@ class FSR_MoveIt_Server(Node):
         moveit_robot_state = RobotState()
         moveit_robot_state.joint_state = current_joint_state
 
-        move_group.max_velocity = 0.5
-        move_group.max_acceleration = 0.5
+        move_group.max_velocity = max_velocity
+        move_group.max_acceleration = max_acceleration
 
         plan = move_group.plan(start_joint_state=current_joint_state, pose=destination_pose, cartesian=True)
 
