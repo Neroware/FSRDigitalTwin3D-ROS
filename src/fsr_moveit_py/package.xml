@@ -1,0 +1,24 @@
+<package format="3">
+  <name>fsr_moveit_py</name>
+  <version>0.1.0</version>
+  <description>The FORSocialRobots MoveIt python scripts package</description>
+  <author email="raoul.zebisch@uni-a.de">Raoul Zebisch</author>
+
+  <maintainer email="raoul.zebisch@uni-a.de">Raoul Zebisch</maintainer>
+  
+  <license>MIT</license>
+
+  <build_depend>fsr_moveit</build_depend>
+  <build_export_depend>fsr_moveit</build_export_depend>
+  <exec_depend>fsr_moveit</exec_depend>
+
+  <test_depend>ament_copyright</test_depend>
+  <test_depend>ament_flake8</test_depend>
+  <test_depend>ament_pep257</test_depend>
+  <test_depend>python3-pytest</test_depend>
+
+  <export>
+    <build_type>ament_python</build_type>
+  </export>
+
+</package>
