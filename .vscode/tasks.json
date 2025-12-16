@@ -1,0 +1,9 @@
+{
+    "version": "2.0.0",
+    "tasks": [{
+        "label": "bringup ur5e",
+        "command": "ros2",
+        "args": ["launch", "fsr_moveit", "robot.ur5e_sim.launch.xml"],
+        "type": "shell"
+    }]
+}
