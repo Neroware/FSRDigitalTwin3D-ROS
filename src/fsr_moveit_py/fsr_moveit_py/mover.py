@@ -110,18 +110,20 @@ class FSR_MoveIt_Server(Node):
         previous_ending_joint_angles = pick_up_pose.joint_trajectory.points[-1].positions
 
         # Place - move gripper to desired placement position
-        place_pose = self._plan_trajectory(joint_names, move_group, req.place_pose, previous_ending_joint_angles, max_velocity, max_acceleration)
+        place_pose = copy.deepcopy(req.place_pose)
+        place_pose.position.z -= req.pnp_input.place_pose_z
+        release_pose = self._plan_trajectory(joint_names, move_group, place_pose, previous_ending_joint_angles, max_velocity, max_acceleration)
 
-        if not place_pose.joint_trajectory.points:
+        if not release_pose.joint_trajectory.points:
             return res
 
         # If trajectory planning worked for all pick and place stages, add plan to response
         res.trajectories.append(pre_grasp_pose)
         res.trajectories.append(grasp_pose)
         res.trajectories.append(pick_up_pose)
-        res.trajectories.append(place_pose)
+        res.trajectories.append(release_pose)
 
-        self.get_logger().info("UR5e cobot trajectories generated. Have a nice day!")
+        self.get_logger().info("Trajectories generated. Have a nice day!")
 
         return res
     
