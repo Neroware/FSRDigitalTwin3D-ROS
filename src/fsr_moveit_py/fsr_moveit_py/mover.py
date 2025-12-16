@@ -56,11 +56,11 @@ class FSR_MoveIt_Server(Node):
         callback_group = ReentrantCallbackGroup()
 
         joint_names = req.joints_input.joint_names
-        group_name = req.pnp_input.group_name
-        end_effector_name = req.pnp_input.end_effector_name
-        base_link_name = req.pnp_input.base_link_name
-        max_velocity = req.pnp_input.max_velocity
-        max_acceleration = req.pnp_input.max_acceleration
+        group_name = req.group.group_name
+        end_effector_name = req.group.end_effector_name
+        base_link_name = req.group.base_link_name
+        max_velocity = req.pars.max_velocity
+        max_acceleration = req.pars.max_acceleration
         planner_id = "RRTConnectkConfigDefault"
 
         move_group = MoveIt2(
@@ -83,7 +83,7 @@ class FSR_MoveIt_Server(Node):
         current_robot_joint_configuration = req.joints_input.joints
 
         # Pre grasp - position gripper directly above target object
-        pre_grasp_pose = self._plan_trajectory(joint_names, move_group, req.pick_pose, current_robot_joint_configuration, max_velocity, max_acceleration)
+        pre_grasp_pose = self._plan_trajectory(joint_names, move_group, req.pars.pick_pose, current_robot_joint_configuration, max_velocity, max_acceleration)
 
          # If the trajectory has no points, planning has failed and we return an empty response
         if not pre_grasp_pose.joint_trajectory.points:
@@ -92,8 +92,8 @@ class FSR_MoveIt_Server(Node):
         previous_ending_joint_angles = pre_grasp_pose.joint_trajectory.points[-1].positions
 
         # Grasp - lower gripper so that fingers are on either side of object
-        pick_pose = copy.deepcopy(req.pick_pose)
-        pick_pose.position.z -= req.pnp_input.pick_pose_z # Static value coming from Unity
+        pick_pose = copy.deepcopy(req.pars.pick_pose)
+        pick_pose.position.z -= req.pars.pick_pose_z # Static value coming from Unity
         grasp_pose = self._plan_trajectory(joint_names, move_group, pick_pose, previous_ending_joint_angles, max_velocity, max_acceleration)
 
         if not pre_grasp_pose.joint_trajectory.points:
@@ -102,7 +102,7 @@ class FSR_MoveIt_Server(Node):
         previous_ending_joint_angles = grasp_pose.joint_trajectory.points[-1].positions
 
         # Pick Up - raise gripper back to the pre grasp position
-        pick_up_pose = self._plan_trajectory(joint_names, move_group, req.pick_pose, previous_ending_joint_angles, max_velocity, max_acceleration)
+        pick_up_pose = self._plan_trajectory(joint_names, move_group, req.pars.pick_pose, previous_ending_joint_angles, max_velocity, max_acceleration)
 
         if not pick_up_pose.joint_trajectory.points:
             return res
@@ -110,8 +110,8 @@ class FSR_MoveIt_Server(Node):
         previous_ending_joint_angles = pick_up_pose.joint_trajectory.points[-1].positions
 
         # Place - move gripper to desired placement position
-        place_pose = copy.deepcopy(req.place_pose)
-        place_pose.position.z -= req.pnp_input.place_pose_z
+        place_pose = copy.deepcopy(req.pars.place_pose)
+        place_pose.position.z -= req.pars.place_pose_z
         release_pose = self._plan_trajectory(joint_names, move_group, place_pose, previous_ending_joint_angles, max_velocity, max_acceleration)
 
         if not release_pose.joint_trajectory.points:

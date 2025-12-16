@@ -1,0 +1,5 @@
+MoveitJoints joints_input
+MoveitGroup group
+MoveInput pars
+---
+moveit_msgs/RobotTrajectory trajectory

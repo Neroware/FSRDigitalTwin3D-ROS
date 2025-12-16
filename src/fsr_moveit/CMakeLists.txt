@@ -31,12 +31,15 @@ install(DIRECTORY launch DESTINATION share/${PROJECT_NAME}/)
 
 set(msg_files
   "msg/MoveitJoints.msg"
-  "msg/PickAndPlaceInput.msg"
+  "msg/MoveitGroup.msg"
   "msg/Trajectory.msg"
+  "msg/function/PickAndPlaceInput.msg"
+  "msg/function/MoveInput.msg"
 )
 
 set(srv_files
   "srv/PickAndPlaceService.srv"
+  "srv/MoveService.srv"
 )
 
 rosidl_generate_interfaces(${PROJECT_NAME}

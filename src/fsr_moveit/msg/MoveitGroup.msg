@@ -1,0 +1,3 @@
+string group_name
+string end_effector_name
+string base_link_name

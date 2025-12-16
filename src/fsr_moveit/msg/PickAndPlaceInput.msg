@@ -1,7 +1,0 @@
-float64 pick_pose_z
-float64 place_pose_z
-float64 max_velocity
-float64 max_acceleration
-string group_name
-string end_effector_name
-string base_link_name
