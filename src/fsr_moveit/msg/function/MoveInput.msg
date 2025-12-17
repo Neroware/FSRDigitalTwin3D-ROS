@@ -1,3 +1,4 @@
 geometry_msgs/Pose target_pose
 float64 max_velocity
 float64 max_acceleration
+float64 ee_offset

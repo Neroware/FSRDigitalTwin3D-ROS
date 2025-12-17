@@ -2,39 +2,27 @@
 
 from __future__ import print_function
 
+import sys
+import copy
+import math
 from threading import Thread
 
 import rclpy
 from rclpy.node import Node
 from rclpy.callback_groups import ReentrantCallbackGroup
 
-import sys
-import copy
-import math
-from pymoveit2 import MoveIt2, MoveIt2State
-# import moveit_commander
+from pymoveit2 import MoveIt2
+from fsr_moveit_py.trajectory_planner import TrajectoryPlanner
+from fsr_moveit.srv import PickAndPlaceService, MoveService
+from fsr_moveit.srv._pick_and_place_service import PickAndPlaceService_Request, PickAndPlaceService_Response
+from fsr_moveit.srv._move_service import MoveService_Request, MoveService_Response
 
-import moveit_msgs.msg
-from moveit_msgs.msg import Constraints, JointConstraint, PositionConstraint, OrientationConstraint, BoundingVolume, RobotTrajectory
-from sensor_msgs.msg import JointState
-from moveit_msgs.msg import RobotState
-import geometry_msgs.msg
-from geometry_msgs.msg import Quaternion, Pose
-from std_msgs.msg import String
-# from moveit_commander.conversions import pose_to_list
-
-from fsr_moveit.srv import PickAndPlaceService
-
-if True:
-    def planCompat(plan):
-        return RobotTrajectory(joint_trajectory=plan)
-else:
-    raise NotImplementedError()
 
 class FSR_MoveIt_Server(Node):
     def __init__(self):
         super().__init__('fsr_moveit_server')
-        self._mover_srv = self.create_service(PickAndPlaceService, 'fsr_moveit', self._plan_pick_and_place)
+        self._pnp_srv = self.create_service(PickAndPlaceService, 'fsr_moveit_pick_and_place_srv', self._service_pick_and_place)
+        self._move_srv = self.create_service(MoveService, 'fsr_moveit_move_srv', self._service_move)
     
     """
     Creates a pick and place plan using the four states below.
@@ -50,7 +38,7 @@ class FSR_MoveIt_Server(Node):
 
     https://github.com/ros-planning/moveit/blob/master/moveit_commander/src/moveit_commander/move_group.py
     """
-    def _plan_pick_and_place(self, req, res):
+    def _service_pick_and_place(self, req : PickAndPlaceService_Request, res : PickAndPlaceService_Response) -> PickAndPlaceService_Response:
         self.get_logger().info("Recieved request to plan pick-and-place trajectory...")
 
         callback_group = ReentrantCallbackGroup()
@@ -72,6 +60,7 @@ class FSR_MoveIt_Server(Node):
             callback_group=callback_group,
         )
         move_group.planner_id = ( planner_id )
+        trajectory_planner : TrajectoryPlanner = TrajectoryPlanner(max_velocity, max_acceleration)
 
         # Spin the node in background thread(s) and wait a bit for initialization
         executor = rclpy.executors.MultiThreadedExecutor(2)
@@ -83,7 +72,7 @@ class FSR_MoveIt_Server(Node):
         current_robot_joint_configuration = req.joints_input.joints
 
         # Pre grasp - position gripper directly above target object
-        pre_grasp_pose = self._plan_trajectory(joint_names, move_group, req.pars.pick_pose, current_robot_joint_configuration, max_velocity, max_acceleration)
+        pre_grasp_pose = trajectory_planner.plan_trajectory(joint_names, move_group, req.pars.pick_pose, current_robot_joint_configuration)
 
          # If the trajectory has no points, planning has failed and we return an empty response
         if not pre_grasp_pose.joint_trajectory.points:
@@ -94,7 +83,7 @@ class FSR_MoveIt_Server(Node):
         # Grasp - lower gripper so that fingers are on either side of object
         pick_pose = copy.deepcopy(req.pars.pick_pose)
         pick_pose.position.z -= req.pars.pick_pose_z # Static value coming from Unity
-        grasp_pose = self._plan_trajectory(joint_names, move_group, pick_pose, previous_ending_joint_angles, max_velocity, max_acceleration)
+        grasp_pose = trajectory_planner.plan_trajectory(joint_names, move_group, pick_pose, previous_ending_joint_angles)
 
         if not pre_grasp_pose.joint_trajectory.points:
             return res
@@ -102,7 +91,7 @@ class FSR_MoveIt_Server(Node):
         previous_ending_joint_angles = grasp_pose.joint_trajectory.points[-1].positions
 
         # Pick Up - raise gripper back to the pre grasp position
-        pick_up_pose = self._plan_trajectory(joint_names, move_group, req.pars.pick_pose, previous_ending_joint_angles, max_velocity, max_acceleration)
+        pick_up_pose = trajectory_planner.plan_trajectory(joint_names, move_group, req.pars.pick_pose, previous_ending_joint_angles)
 
         if not pick_up_pose.joint_trajectory.points:
             return res
@@ -112,7 +101,7 @@ class FSR_MoveIt_Server(Node):
         # Place - move gripper to desired placement position
         place_pose = copy.deepcopy(req.pars.place_pose)
         place_pose.position.z -= req.pars.place_pose_z
-        release_pose = self._plan_trajectory(joint_names, move_group, place_pose, previous_ending_joint_angles, max_velocity, max_acceleration)
+        release_pose = trajectory_planner.plan_trajectory(joint_names, move_group, place_pose, previous_ending_joint_angles)
 
         if not release_pose.joint_trajectory.points:
             return res
@@ -126,33 +115,43 @@ class FSR_MoveIt_Server(Node):
         self.get_logger().info("Trajectories generated. Have a nice day!")
 
         return res
-    
-    """
-    Given the start angles of the robot, plan a trajectory that ends at the destination pose.
-    """
-    def _plan_trajectory(self, joint_names, move_group, destination_pose, start_joint_angles, max_velocity = 0.5, max_acceleration = 0.5):
-        start_joint_angles = start_joint_angles.tolist()
 
-        current_joint_state = JointState()
-        current_joint_state.name = joint_names
-        current_joint_state.position = start_joint_angles
+    def _service_move(self, req : MoveService_Request, res : MoveService_Response) -> MoveService_Response:
+        self.get_logger().info("Recieved request to plan trajectory...")
 
-        moveit_robot_state = RobotState()
-        moveit_robot_state.joint_state = current_joint_state
+        callback_group = ReentrantCallbackGroup()
 
-        move_group.max_velocity = max_velocity
-        move_group.max_acceleration = max_acceleration
+        joint_names = req.joints_input.joint_names
+        group_name = req.group.group_name
+        end_effector_name = req.group.end_effector_name
+        base_link_name = req.group.base_link_name
+        max_velocity = req.pars.max_velocity
+        max_acceleration = req.pars.max_acceleration
+        planner_id = "RRTConnectkConfigDefault"
 
-        plan = move_group.plan(start_joint_state=current_joint_state, pose=destination_pose, cartesian=True)
+        move_group = MoveIt2(
+            node=self,
+            joint_names=joint_names,
+            base_link_name=base_link_name,
+            end_effector_name=end_effector_name,
+            group_name=group_name,
+            callback_group=callback_group,
+        )
+        move_group.planner_id = ( planner_id )
+        trajectory_planner : TrajectoryPlanner = TrajectoryPlanner(max_velocity, max_acceleration)
 
-        if not plan:
-            exception_str = """
-                Trajectory could not be planned for a destination of {} with starting joint angles {}.
-                Please make sure target and destination are reachable by the robot.
-            """.format(destination_pose, destination_pose)
-            raise Exception(exception_str)
+        current_robot_joint_configuration = req.joints_input.joints
+        target_pose = copy.deepcopy(req.pars.target_pose)
+        target_pose.position.z -= req.ee_offset
+        goal_pose = trajectory_planner.plan_trajectory(joint_names, move_group, target_pose, current_robot_joint_configuration)
 
-        return planCompat(plan)
+         # If the trajectory has no points, planning has failed and we return an empty response
+        if not goal_pose.joint_trajectory.points:
+            return res
+
+        res.trajectory = goal_pose
+        return res
+
 
 def main(args=None):
     rclpy.init(args=args)
