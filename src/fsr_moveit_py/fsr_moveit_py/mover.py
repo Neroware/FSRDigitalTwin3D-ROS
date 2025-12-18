@@ -98,9 +98,17 @@ class FSR_MoveIt_Server(Node):
 
         previous_ending_joint_angles = pick_up_pose.joint_trajectory.points[-1].positions
 
+        # Pre Place - move gripper above desired placement position
+        pre_place_pose = trajectory_planner.plan_trajectory(joint_names, move_group, req.pars.place_pose, previous_ending_joint_angles)
+
+        if not pre_place_pose.joint_trajectory.points:
+            return res
+
+        previous_ending_joint_angles = pre_place_pose.joint_trajectory.points[-1].positions
+
         # Place - move gripper to desired placement position
         place_pose = copy.deepcopy(req.pars.place_pose)
-        place_pose.position.z -= req.pars.place_pose_z
+        place_pose.position.z -= req.pars.place_pose_z # Static value coming from Unity
         release_pose = trajectory_planner.plan_trajectory(joint_names, move_group, place_pose, previous_ending_joint_angles)
 
         if not release_pose.joint_trajectory.points:
@@ -110,6 +118,7 @@ class FSR_MoveIt_Server(Node):
         res.trajectories.append(pre_grasp_pose)
         res.trajectories.append(grasp_pose)
         res.trajectories.append(pick_up_pose)
+        res.trajectories.append(pre_place_pose)
         res.trajectories.append(release_pose)
 
         self.get_logger().info("Trajectories generated. Have a nice day!")
