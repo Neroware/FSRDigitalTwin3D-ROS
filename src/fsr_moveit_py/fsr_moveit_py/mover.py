@@ -141,9 +141,7 @@ class FSR_MoveIt_Server(Node):
         trajectory_planner : TrajectoryPlanner = TrajectoryPlanner(max_velocity, max_acceleration)
 
         current_robot_joint_configuration = req.joints_input.joints
-        target_pose = copy.deepcopy(req.pars.target_pose)
-        target_pose.position.z -= req.pars.ee_offset
-        goal_pose = trajectory_planner.plan_trajectory(joint_names, move_group, target_pose, current_robot_joint_configuration)
+        goal_pose = trajectory_planner.plan_trajectory(joint_names, move_group, req.pars.target_pose, current_robot_joint_configuration)
 
          # If the trajectory has no points, planning has failed and we return an empty response
         if not goal_pose.joint_trajectory.points:
