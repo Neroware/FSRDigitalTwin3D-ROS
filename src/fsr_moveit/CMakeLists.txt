@@ -33,13 +33,13 @@ set(msg_files
   "msg/MoveitJoints.msg"
   "msg/MoveitGroup.msg"
   "msg/Trajectory.msg"
-  "msg/function/PickAndPlaceInput.msg"
-  "msg/function/MoveInput.msg"
+  "msg/primitive/PickAndPlaceInput.msg"
+  "msg/primitive/MoveToInput.msg"
 )
 
 set(srv_files
   "srv/PickAndPlaceService.srv"
-  "srv/MoveService.srv"
+  "srv/MoveToService.srv"
 )
 
 rosidl_generate_interfaces(${PROJECT_NAME}

@@ -1,6 +1,5 @@
 geometry_msgs/Pose pick_pose
 geometry_msgs/Pose place_pose
 float64 pick_pose_z
-float64 place_pose_z
 float64 max_velocity
 float64 max_acceleration

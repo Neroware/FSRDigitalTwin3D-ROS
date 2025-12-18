@@ -1,5 +1,5 @@
 MoveitJoints joints_input
 MoveitGroup group
-MoveInput pars
+MoveToInput pars
 ---
 moveit_msgs/RobotTrajectory trajectory

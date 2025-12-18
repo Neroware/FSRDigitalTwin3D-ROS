@@ -15,14 +15,14 @@ from pymoveit2 import MoveIt2
 from fsr_moveit_py.trajectory_planner import TrajectoryPlanner
 from fsr_moveit.srv import PickAndPlaceService, MoveService
 from fsr_moveit.srv._pick_and_place_service import PickAndPlaceService_Request, PickAndPlaceService_Response
-from fsr_moveit.srv._move_service import MoveService_Request, MoveService_Response
+from fsr_moveit.srv._move_to_service import MoveToService_Request, MoveToService_Response
 
 
 class FSR_MoveIt_Server(Node):
     def __init__(self):
         super().__init__('fsr_moveit_server')
         self._pnp_srv = self.create_service(PickAndPlaceService, 'fsr_moveit_pick_and_place_srv', self._service_pick_and_place)
-        self._move_srv = self.create_service(MoveService, 'fsr_moveit_move_srv', self._service_move)
+        self._move_srv = self.create_service(MoveService, 'fsr_moveit_move_to_srv', self._service_move_to)
     
     """
     Creates a pick and place plan using the four states below.
@@ -98,34 +98,23 @@ class FSR_MoveIt_Server(Node):
 
         previous_ending_joint_angles = pick_up_pose.joint_trajectory.points[-1].positions
 
-        # Pre Place - move gripper above desired placement position
-        pre_place_pose = trajectory_planner.plan_trajectory(joint_names, move_group, req.pars.place_pose, previous_ending_joint_angles)
-
-        if not pre_place_pose.joint_trajectory.points:
-            return res
-
-        previous_ending_joint_angles = pre_place_pose.joint_trajectory.points[-1].positions
-
         # Place - move gripper to desired placement position
-        place_pose = copy.deepcopy(req.pars.place_pose)
-        place_pose.position.z -= req.pars.place_pose_z # Static value coming from Unity
-        release_pose = trajectory_planner.plan_trajectory(joint_names, move_group, place_pose, previous_ending_joint_angles)
+        place_pose = trajectory_planner.plan_trajectory(joint_names, move_group, req.pars.place_pose, previous_ending_joint_angles)
 
-        if not release_pose.joint_trajectory.points:
+        if not place_pose.joint_trajectory.points:
             return res
 
         # If trajectory planning worked for all pick and place stages, add plan to response
         res.trajectories.append(pre_grasp_pose)
         res.trajectories.append(grasp_pose)
         res.trajectories.append(pick_up_pose)
-        res.trajectories.append(pre_place_pose)
-        res.trajectories.append(release_pose)
+        res.trajectories.append(place_pose)
 
         self.get_logger().info("Trajectories generated. Have a nice day!")
 
         return res
 
-    def _service_move(self, req : MoveService_Request, res : MoveService_Response) -> MoveService_Response:
+    def _service_move_to(self, req : MoveToService_Request, res : MoveToService_Response) -> MoveToService_Response:
         self.get_logger().info("Recieved request to plan trajectory...")
 
         callback_group = ReentrantCallbackGroup()
