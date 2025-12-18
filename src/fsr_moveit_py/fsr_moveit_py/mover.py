@@ -13,7 +13,7 @@ from rclpy.callback_groups import ReentrantCallbackGroup
 
 from pymoveit2 import MoveIt2
 from fsr_moveit_py.trajectory_planner import TrajectoryPlanner
-from fsr_moveit.srv import PickAndPlaceService, MoveService
+from fsr_moveit.srv import PickAndPlaceService, MoveToService
 from fsr_moveit.srv._pick_and_place_service import PickAndPlaceService_Request, PickAndPlaceService_Response
 from fsr_moveit.srv._move_to_service import MoveToService_Request, MoveToService_Response
 
@@ -22,7 +22,7 @@ class FSR_MoveIt_Server(Node):
     def __init__(self):
         super().__init__('fsr_moveit_server')
         self._pnp_srv = self.create_service(PickAndPlaceService, 'fsr_moveit_pick_and_place_srv', self._service_pick_and_place)
-        self._move_srv = self.create_service(MoveService, 'fsr_moveit_move_to_srv', self._service_move_to)
+        self._move_srv = self.create_service(MoveToService, 'fsr_moveit_move_to_srv', self._service_move_to)
     
     """
     Creates a pick and place plan using the four states below.
